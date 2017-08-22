@@ -8,18 +8,52 @@ output:
 
 ## Loading and preprocessing the data
 
+    unzip("repdata%2Fdata%2Factivity.zip")
+    activity_data <- read.csv("activity.csv", header= TRUE, sep= ",")
 
 
 ## What is mean total number of steps taken per day?
 
-
+    total_steps <- aggregate(steps ~ date, data = activity_data, FUN = sum, na.rm= TRUE)
+    hist(total_steps$steps)
+    mean(total_steps$steps)
+    median(total_steps$steps)
 
 ## What is the average daily activity pattern?
 
+    activity_pattern <- aggregate(steps~interval, data= activity_data, FUN = mean, na.rm= TRUE)
+    plot(steps ~ interval, data= activity_pattern, type= "l")
+    max_interval <- which.max(activity_pattern$steps)
+    activity_pattern$interval[max_interval]
 
 
 ## Imputing missing values
 
-
-
+    missing_values <- sum(is.na(activity_data$steps))
+    interval_filling <- function(interval) {
+    activity_pattern[activity_pattern$interval==interval, ]$steps
+       }
+    activitydata_filled <- activity_data
+    count=0
+        for(i in 1:nrow(activitydata_filled)) {
+        if(is.na(activitydata_filled[i,]$steps)) {
+            activitydata_filled[i, ]$steps <- interval_filling(activitydata_filled[i, ]$interval)
+            count= count+1
+        }
+    }
+    cat("Total", count, "NA values were filled.\n\r")
+    
+    totalsteps_filled <- aggregate(steps ~ date, data= activitydata_filled, sum)
+    hist(totalsteps_filled$steps)
+    mean(totalsteps_filled$steps)
+    median(totalsteps_filled$steps)
 ## Are there differences in activity patterns between weekdays and weekends?
+
+    activitydata_filled$day=ifelse(as.POSIXct(as.Date(activitydata_filled$date))$wday%%6==0,
+                               "weekend", "weekday")
+                               
+    activitydata_filled$day <- factor(activitydata_filled$day, levels=c("weekday", "weekend"))
+
+    totalsteps_filled <- aggregate(steps ~ interval+day, activitydata_filled, mean)
+    library(lattice)
+    xyplot(steps~interval|factor(day),data=totalsteps_filled,aspect=1/2,type="l")
